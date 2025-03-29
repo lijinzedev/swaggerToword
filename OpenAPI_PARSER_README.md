@@ -2,6 +2,30 @@
 
 本文档描述了`OpenApiParserService`解析OpenAPI规范文件生成数据模型的规则。该服务将OpenAPI JSON转换为可用于文档生成的数据结构。
 
+## 解析策略模式
+
+系统支持两种解析OpenAPI规范的策略：
+
+1. **JSON解析策略**（默认）：直接解析JSON结构，由`JsonOpenApiParser`实现。
+   - 通过Jackson解析原始JSON结构
+   - 无需额外依赖，对JSON结构灵活处理
+   - 适用于自定义解析需求
+
+2. **对象模型解析策略**：使用Swagger官方库对象模型，由`ObjectOpenApiParser`实现。
+   - 利用`io.swagger.parser.v3.OpenAPIV3Parser`解析
+   - 基于正式的对象模型，确保解析的准确性
+   - 更好地支持OpenAPI规范的验证
+
+可以通过`application.yml`中的配置选择使用哪种解析策略：
+
+```yaml
+openapi:
+  parser:
+    use-object-model: false  # 设置为true使用对象模型解析，false使用JSON解析
+```
+
+无论使用哪种解析策略，最终生成的数据结构都是统一的，确保下游处理兼容性。
+
 ## 主要数据结构
 
 `OpenApiParserService.buildDataModel()`方法解析OpenAPI JSON并生成以下主要数据结构：

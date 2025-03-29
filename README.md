@@ -55,10 +55,20 @@ mvn spring-boot:run
 
 4. 访问应用
 
-应用启动后，可以通过浏览器访问Swagger UI界面:
+应用启动后，会在控制台日志中自动打印Swagger UI的访问地址，类似如下:
 
 ```
-http://localhost:8080/swagger-ui.html
+----------------------------------------------------------
+  应用启动成功!
+  Swagger文档: http://localhost:8081/swagger-ui.html
+  外部访问文档: http://192.168.1.100:8081/swagger-ui.html
+----------------------------------------------------------
+```
+
+也可以手动通过浏览器访问Swagger UI界面:
+
+```
+http://localhost:8081/swagger-ui.html
 ```
 
 ## 使用指南

@@ -80,5 +80,12 @@
             <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
+        
+        <!-- OpenAPI Parser -->
+        <dependency>
+            <groupId>io.swagger.parser.v3</groupId>
+            <artifactId>swagger-parser</artifactId>
+            <version>2.1.12</version>
+        </dependency>
     </dependencies>
 </project>

@@ -7,6 +7,7 @@ import com.deepoove.poi.plugin.table.LoopRowTableRenderPolicy;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tools.highight.HighlightRenderPolicy;
+import com.tools.model.ApiDataModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
@@ -15,7 +16,6 @@ import org.springframework.web.client.RestTemplate;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
 
 @Service
 public class OpenApiDocService {
@@ -60,9 +60,9 @@ public class OpenApiDocService {
      */
     public byte[] generateDocFromJson(String openApiJson, InputStream templateStream) throws IOException {
         JsonNode rootNode = objectMapper.readTree(openApiJson);
-        Map<String, Object> dataModel = parserService.buildDataModel(rootNode);
+        final ApiDataModel apiDataModel = parserService.buildDataModel(rootNode);
 
-        return renderDocument(dataModel, templateStream);
+        return renderDocument(apiDataModel, templateStream);
     }
 
     /**
@@ -71,7 +71,7 @@ public class OpenApiDocService {
     public byte[] generateDocFromFile(InputStream jsonFileStream, String templateName) throws IOException {
         JsonNode rootNode = objectMapper.readTree(jsonFileStream);
         InputStream templateStream = getTemplateStream(templateName);
-        Map<String, Object> dataModel = parserService.buildDataModel(rootNode);
+        ApiDataModel dataModel = parserService.buildDataModel(rootNode);
 
         return renderDocument(dataModel, templateStream);
     }
@@ -81,7 +81,7 @@ public class OpenApiDocService {
      */
     public byte[] generateDocFromFile(InputStream jsonFileStream, InputStream templateStream) throws IOException {
         JsonNode rootNode = objectMapper.readTree(jsonFileStream);
-        Map<String, Object> dataModel = parserService.buildDataModel(rootNode);
+        ApiDataModel dataModel = parserService.buildDataModel(rootNode);
 
         return renderDocument(dataModel, templateStream);
     }
@@ -100,7 +100,7 @@ public class OpenApiDocService {
     /**
      * 渲染文档
      */
-    private byte[] renderDocument(Map<String, Object> dataModel, InputStream templateStream) throws IOException {
+    private byte[] renderDocument(ApiDataModel dataModel, InputStream templateStream) throws IOException {
         Configure config = Configure.builder()
                 .bind("parameters", new LoopRowTableRenderPolicy())
                 .bind("responses", new LoopRowTableRenderPolicy())
@@ -111,7 +111,7 @@ public class OpenApiDocService {
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-        XWPFTemplate template = XWPFTemplate.compile(templateStream, config).render(dataModel);
+        XWPFTemplate template = XWPFTemplate.compile(templateStream, config).render(dataModel.toMap());
         template.write(outputStream);
         template.close();
 

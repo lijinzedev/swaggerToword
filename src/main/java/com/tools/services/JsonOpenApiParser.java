@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tools.highight.HighlightRenderData;
 import com.tools.highight.HighlightStyle;
+import com.tools.model.*;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -19,24 +20,37 @@ public class JsonOpenApiParser implements OpenApiParser {
 
     @Override
     public Map<String, Object> buildDataModel(String openApiContent) throws JsonProcessingException {
+        // 为了保持接口兼容性，转换结构化模型为Map
+        ApiDataModel structuredModel = buildStructuredDataModel(openApiContent);
+        return structuredModel.toMap();
+    }
+
+    @Override
+    public ApiDataModel buildStructuredDataModel(String openApiContent) throws JsonProcessingException {
         JsonNode rootNode = mapper.readTree(openApiContent);
-        return buildDataModel(rootNode);
+        return buildStructuredDataModel(rootNode);
     }
 
     /**
-     * 构建数据模型
+     * 构建结构化数据模型（通过JSON节点构建）
      */
-    public Map<String, Object> buildDataModel(JsonNode rootNode) throws JsonProcessingException {
-        Map<String, Object> dataModel = new HashMap<>();
+    public ApiDataModel buildStructuredDataModel(JsonNode rootNode) throws JsonProcessingException {
+        ApiDataModel dataModel = new ApiDataModel();
 
         // 解析info部分
-        parseInfo(rootNode, dataModel);
+        dataModel.setInfo(parseApiInfo(rootNode));
 
         // 解析paths部分 (接口列表)
-        parseResources(rootNode, dataModel);
+        List<ApiResource> resources = parseApiResources(rootNode);
+        for (ApiResource resource : resources) {
+            dataModel.addResource(resource);
+        }
 
         // 解析components/schemas部分 (数据模型)
-        parseDefinitions(rootNode, dataModel);
+        List<Definition> definitions = parseDefinitions(rootNode);
+        for (Definition definition : definitions) {
+            dataModel.addDefinition(definition);
+        }
 
         return dataModel;
     }
@@ -44,37 +58,41 @@ public class JsonOpenApiParser implements OpenApiParser {
     /**
      * 解析API信息
      */
-    private void parseInfo(JsonNode rootNode, Map<String, Object> dataModel) {
+    private ApiInfo parseApiInfo(JsonNode rootNode) {
         JsonNode infoNode = rootNode.get("info");
-        Map<String, Object> info = new HashMap<>();
-        info.put("title", getTextValue(infoNode, "title"));
-        info.put("description", getTextValue(infoNode, "description"));
-        info.put("version", getTextValue(infoNode, "version"));
+        if (infoNode == null) {
+            return new ApiInfo();
+        }
+
+        ApiInfo apiInfo = new ApiInfo();
+        apiInfo.setTitle(getTextValue(infoNode, "title"));
+        apiInfo.setDescription(getTextValue(infoNode, "description"));
+        apiInfo.setVersion(getTextValue(infoNode, "version"));
 
         // 解析联系人信息
-        Map<String, String> contact = new HashMap<>();
         if (infoNode.has("contact")) {
             JsonNode contactNode = infoNode.get("contact");
-            contact.put("email", getTextValue(contactNode, "email"));
+            ApiInfo.ContactInfo contact = new ApiInfo.ContactInfo();
+            contact.setEmail(getTextValue(contactNode, "email"));
+            apiInfo.setContact(contact);
         }
-        info.put("contact", contact);
 
         // 解析许可证信息
-        Map<String, String> license = new HashMap<>();
         if (infoNode.has("license")) {
             JsonNode licenseNode = infoNode.get("license");
-            license.put("name", getTextValue(licenseNode, "name"));
+            ApiInfo.LicenseInfo license = new ApiInfo.LicenseInfo();
+            license.setName(getTextValue(licenseNode, "name"));
+            apiInfo.setLicense(license);
         }
-        info.put("license", license);
 
-        dataModel.put("info", info);
+        return apiInfo;
     }
 
     /**
      * 解析API资源路径
      */
-    private void parseResources(JsonNode rootNode, Map<String, Object> dataModel) {
-        List<Map<String, Object>> resources = new ArrayList<>();
+    private List<ApiResource> parseApiResources(JsonNode rootNode) {
+        Map<String, ApiResource> resourceMap = new HashMap<>();
         JsonNode pathsNode = rootNode.get("paths");
 
         if (pathsNode != null) {
@@ -85,17 +103,17 @@ public class JsonOpenApiParser implements OpenApiParser {
                 JsonNode pathItemNode = pathEntry.getValue();
 
                 // 处理每个HTTP方法
-                parseOperations(resources, path, pathItemNode);
+                parseOperations(resourceMap, path, pathItemNode);
             }
         }
 
-        dataModel.put("resources", resources);
+        return new ArrayList<>(resourceMap.values());
     }
 
     /**
      * 解析API操作
      */
-    private void parseOperations(List<Map<String, Object>> resources, String path, JsonNode pathItemNode) {
+    private void parseOperations(Map<String, ApiResource> resourceMap, String path, JsonNode pathItemNode) {
         Iterator<Map.Entry<String, JsonNode>> operations = pathItemNode.fields();
         while (operations.hasNext()) {
             Map.Entry<String, JsonNode> operationEntry = operations.next();
@@ -109,44 +127,47 @@ public class JsonOpenApiParser implements OpenApiParser {
             }
 
             // 查找或创建resource
-            Map<String, Object> resource = findResourceByName(resources, tag);
+            ApiResource resource = resourceMap.get(tag);
             if (resource == null) {
-                resource = new HashMap<>();
-                resource.put("name", tag);
-                resource.put("description", "");
-                resource.put("endpoints", new ArrayList<Map<String, Object>>());
-                resources.add(resource);
+                resource = new ApiResource();
+                resource.setName(tag);
+                resource.setDescription("");
+                resourceMap.put(tag, resource);
             }
 
             // 创建endpoint
-            Map<String, Object> endpoint = createEndpoint(path, httpMethod, operationNode);
+            Endpoint endpoint = createEndpoint(path, httpMethod, operationNode);
 
             // 添加endpoint到resource
-            ((List<Map<String, Object>>) resource.get("endpoints")).add(endpoint);
+            resource.addEndpoint(endpoint);
         }
     }
 
     /**
      * 创建端点信息
      */
-    private Map<String, Object> createEndpoint(String path, String httpMethod, JsonNode operationNode) {
-        Map<String, Object> endpoint = new HashMap<>();
-        endpoint.put("summary", getTextValue(operationNode, "summary"));
-        endpoint.put("description", getTextValue(operationNode, "description"));
-        endpoint.put("httpMethod", httpMethod.toUpperCase());
-        endpoint.put("url", path);
+    private Endpoint createEndpoint(String path, String httpMethod, JsonNode operationNode) {
+        Endpoint endpoint = new Endpoint();
+        endpoint.setSummary(getTextValue(operationNode, "summary"));
+        endpoint.setDescription(getTextValue(operationNode, "description"));
+        endpoint.setHttpMethod(httpMethod.toUpperCase());
+        endpoint.setUrl(path);
 
         // 处理produces (Content-Type)
-        parseProduces(operationNode, endpoint);
+        List<String> produces = parseProduces(operationNode);
+        endpoint.setProduces(produces);
 
         // 处理consumes (请求Content-Type)
-        parseConsumes(operationNode, endpoint);
+        List<String> consumes = parseConsumes(operationNode);
+        endpoint.setConsumes(consumes);
 
         // 处理参数
-        parseParameters(operationNode, endpoint);
+        List<Parameter> parameters = parseParameters(operationNode);
+        endpoint.setParameters(parameters);
 
         // 处理响应
-        parseResponses(operationNode, endpoint);
+        List<Response> responses = parseResponses(operationNode);
+        endpoint.setResponses(responses);
 
         return endpoint;
     }
@@ -154,7 +175,7 @@ public class JsonOpenApiParser implements OpenApiParser {
     /**
      * 解析产生的内容类型
      */
-    private void parseProduces(JsonNode operationNode, Map<String, Object> endpoint) {
+    private List<String> parseProduces(JsonNode operationNode) {
         List<String> produces = new ArrayList<>();
         if (operationNode.has("responses")) {
             JsonNode responsesNode = operationNode.get("responses");
@@ -166,20 +187,20 @@ public class JsonOpenApiParser implements OpenApiParser {
                     Iterator<String> contentTypes = responseNode.get("content").fieldNames();
                     while (contentTypes.hasNext()) {
                         String next = contentTypes.next();
-                        if (!checkHasProduce(produces, next)) {
+                        if (!produces.contains(next)) {
                             produces.add(next);
                         }
                     }
                 }
             }
         }
-        endpoint.put("produces", produces);
+        return produces;
     }
 
     /**
      * 解析消费的内容类型
      */
-    private void parseConsumes(JsonNode operationNode, Map<String, Object> endpoint) {
+    private List<String> parseConsumes(JsonNode operationNode) {
         List<String> consumes = new ArrayList<>();
         if (operationNode.has("requestBody") && operationNode.get("requestBody").has("content")) {
             Iterator<String> contentTypes = operationNode.get("requestBody").get("content").fieldNames();
@@ -187,27 +208,27 @@ public class JsonOpenApiParser implements OpenApiParser {
                 consumes.add(contentTypes.next());
             }
         }
-        endpoint.put("consumes", consumes);
+        return consumes;
     }
 
     /**
      * 解析参数
      */
-    private void parseParameters(JsonNode operationNode, Map<String, Object> endpoint) {
-        List<Map<String, Object>> parameters = new ArrayList<>();
+    private List<Parameter> parseParameters(JsonNode operationNode) {
+        List<Parameter> parameters = new ArrayList<>();
 
         // 处理常规参数
         if (operationNode.has("parameters")) {
             for (JsonNode paramNode : operationNode.get("parameters")) {
-                Map<String, Object> parameter = new HashMap<>();
-                parameter.put("in", getTextValue(paramNode, "in"));
-                parameter.put("name", getTextValue(paramNode, "name"));
-                parameter.put("description", getTextValue(paramNode, "description"));
-                parameter.put("required", paramNode.has("required") && paramNode.get("required").asBoolean());
+                Parameter parameter = new Parameter();
+                parameter.setIn(getTextValue(paramNode, "in"));
+                parameter.setName(getTextValue(paramNode, "name"));
+                parameter.setDescription(getTextValue(paramNode, "description"));
+                parameter.setRequired(paramNode.has("required") && paramNode.get("required").asBoolean());
 
                 // 处理schema
                 if (paramNode.has("schema")) {
-                    parameter.put("schema", getSchemaType(paramNode.get("schema")));
+                    parameter.setSchema(getSchemaType(paramNode.get("schema")));
                 }
                 parameters.add(parameter);
             }
@@ -224,26 +245,26 @@ public class JsonOpenApiParser implements OpenApiParser {
                     Map.Entry<String, JsonNode> contentEntry = contentFields.next();
                     JsonNode mediaTypeNode = contentEntry.getValue();
                     if (mediaTypeNode.has("schema")) {
-                        Map<String, Object> parameter = new HashMap<>();
-                        parameter.put("in", "body");
-                        parameter.put("name", "body");
-                        parameter.put("description", getTextValue(requestBodyNode, "description"));
-                        parameter.put("required", required);
-                        parameter.put("schema", getSchemaType(mediaTypeNode.get("schema")));
+                        Parameter parameter = new Parameter();
+                        parameter.setIn("body");
+                        parameter.setName("body");
+                        parameter.setDescription(getTextValue(requestBodyNode, "description"));
+                        parameter.setRequired(required);
+                        parameter.setSchema(getSchemaType(mediaTypeNode.get("schema")));
                         parameters.add(parameter);
                     }
                 }
             }
         }
 
-        endpoint.put("parameters", parameters);
+        return parameters;
     }
 
     /**
      * 解析响应
      */
-    private void parseResponses(JsonNode operationNode, Map<String, Object> endpoint) {
-        List<Map<String, Object>> responses = new ArrayList<>();
+    private List<Response> parseResponses(JsonNode operationNode) {
+        List<Response> responses = new ArrayList<>();
         if (operationNode.has("responses")) {
             JsonNode responsesNode = operationNode.get("responses");
             Iterator<Map.Entry<String, JsonNode>> responseFields = responsesNode.fields();
@@ -251,12 +272,12 @@ public class JsonOpenApiParser implements OpenApiParser {
                 Map.Entry<String, JsonNode> responseEntry = responseFields.next();
                 String code = responseEntry.getKey();
                 JsonNode responseNode = responseEntry.getValue();
-                Map<String, Object> response = new HashMap<>();
-                response.put("code", code);
-                response.put("description", getTextValue(responseNode, "description"));
+                
+                Response response = new Response();
+                response.setCode(code);
+                response.setDescription(getTextValue(responseNode, "description"));
 
                 // 处理headers
-                List<Map<String, Object>> headers = new ArrayList<>();
                 if (responseNode.has("headers")) {
                     JsonNode headersNode = responseNode.get("headers");
                     Iterator<Map.Entry<String, JsonNode>> headerFields = headersNode.fields();
@@ -264,15 +285,14 @@ public class JsonOpenApiParser implements OpenApiParser {
                         Map.Entry<String, JsonNode> headerEntry = headerFields.next();
                         String headerName = headerEntry.getKey();
                         JsonNode headerNode = headerEntry.getValue();
-                        Map<String, Object> header = new HashMap<>();
-                        header.put("name", headerName);
-                        header.put("description", getTextValue(headerNode, "description"));
-                        header.put("type", getTextValue(headerNode, "schema", "type"));
-                        headers.add(header);
+                        
+                        Response.Header header = new Response.Header();
+                        header.setName(headerName);
+                        header.setDescription(getTextValue(headerNode, "description"));
+                        header.setType(getTextValue(headerNode, "schema", "type"));
+                        response.addHeader(header);
                     }
                 }
-                response.put("headers", headers);
-                response.put("schema", getSchemaType(null));
 
                 // 处理schema
                 if (responseNode.has("content")) {
@@ -282,21 +302,24 @@ public class JsonOpenApiParser implements OpenApiParser {
                         Map.Entry<String, JsonNode> contentEntry = contentFields.next();
                         JsonNode mediaTypeNode = contentEntry.getValue();
                         if (mediaTypeNode.has("schema")) {
-                            response.put("schema", getSchemaType(mediaTypeNode.get("schema")));
+                            response.setSchema(getSchemaType(mediaTypeNode.get("schema")));
                         }
                     }
+                } else {
+                    response.setSchema(new ArrayList<>());
                 }
+                
                 responses.add(response);
             }
         }
-        endpoint.put("responses", responses);
+        return responses;
     }
 
     /**
      * 解析数据模型定义
      */
-    private void parseDefinitions(JsonNode rootNode, Map<String, Object> dataModel) throws JsonProcessingException {
-        List<Map<String, Object>> definitions = new ArrayList<>();
+    private List<Definition> parseDefinitions(JsonNode rootNode) throws JsonProcessingException {
+        List<Definition> definitions = new ArrayList<>();
         if (rootNode.has("components") && rootNode.get("components").has("schemas")) {
             JsonNode schemasNode = rootNode.get("components").get("schemas");
             Iterator<Map.Entry<String, JsonNode>> schemaFields = schemasNode.fields();
@@ -306,11 +329,10 @@ public class JsonOpenApiParser implements OpenApiParser {
                 String schemaName = schemaEntry.getKey();
                 JsonNode schemaNode = schemaEntry.getValue();
 
-                Map<String, Object> definition = new HashMap<>();
-                definition.put("name", new BookmarkTextRenderData(schemaName, schemaName));
+                Definition definition = new Definition();
+                definition.setName(new BookmarkTextRenderData(schemaName, schemaName));
 
                 // 处理属性
-                List<Map<String, Object>> properties = new ArrayList<>();
                 if (schemaNode.has("properties")) {
                     JsonNode propertiesNode = schemaNode.get("properties");
                     Iterator<Map.Entry<String, JsonNode>> propertyFields = propertiesNode.fields();
@@ -328,57 +350,28 @@ public class JsonOpenApiParser implements OpenApiParser {
                         String propertyName = propertyEntry.getKey();
                         JsonNode propertyNode = propertyEntry.getValue();
 
-                        Map<String, Object> property = new HashMap<>();
-                        property.put("name", propertyName);
-                        property.put("description", getTextValue(propertyNode, "description"));
-                        property.put("required", requiredProps.contains(propertyName));
-                        property.put("schema", getSchemaType(propertyNode));
+                        Definition.Property property = new Definition.Property();
+                        property.setName(propertyName);
+                        property.setDescription(getTextValue(propertyNode, "description"));
+                        property.setRequired(requiredProps.contains(propertyName));
+                        property.setSchema(getSchemaType(propertyNode));
 
-                        properties.add(property);
+                        definition.addProperty(property);
                     }
                 }
-                definition.put("properties", properties);
 
                 // 生成示例代码
-                definition.put("definitionCode", generateExampleJson(schemaNode, schemasNode));
+                definition.setDefinitionCode(generateExampleJson(schemaNode, schemasNode));
                 definitions.add(definition);
             }
         }
 
-        dataModel.put("definitions", definitions);
+        return definitions;
     }
 
     /**
-     * 辅助方法
+     * 获取Schema类型
      */
-    private Map<String, Object> findResourceByName(List<Map<String, Object>> resources, String name) {
-        for (Map<String, Object> resource : resources) {
-            if (name.equals(resource.get("name"))) {
-                return resource;
-            }
-        }
-        return null;
-    }
-
-    private boolean checkHasProduce(List<String> produces, String next) {
-        if (produces == null || produces.isEmpty()) {
-            return false;
-        }
-        return produces.contains(next);
-    }
-
-    private String getTextValue(JsonNode node, String... fieldPath) {
-        JsonNode current = node;
-        for (String field : fieldPath) {
-            if (current != null && current.has(field)) {
-                current = current.get(field);
-            } else {
-                return "";
-            }
-        }
-        return current != null ? current.asText() : "";
-    }
-
     private List<TextRenderData> getSchemaType(JsonNode schemaNode) {
         List<TextRenderData> schema = new ArrayList<>();
         if (schemaNode == null) {
@@ -512,5 +505,20 @@ public class JsonOpenApiParser implements OpenApiParser {
             default:
                 return "unknown";
         }
+    }
+
+    /**
+     * 辅助方法
+     */
+    private String getTextValue(JsonNode node, String... fieldPath) {
+        JsonNode current = node;
+        for (String field : fieldPath) {
+            if (current != null && current.has(field)) {
+                current = current.get(field);
+            } else {
+                return "";
+            }
+        }
+        return current != null ? current.asText() : "";
     }
 } 

@@ -3,11 +3,10 @@ package com.tools.services;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tools.model.ApiDataModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import java.util.Map;
 
 /**
  * OpenAPI解析服务
@@ -33,29 +32,29 @@ public class OpenApiParserService {
      * 构建数据模型（根据配置选择解析方式）
      * 
      * @param openApiContent OpenAPI文档内容
-     * @return 包含数据模型的Map
+     * @return 结构化的ApiDataModel
      * @throws JsonProcessingException 如果处理JSON出错
      */
-    public Map<String, Object> buildDataModel(String openApiContent) throws JsonProcessingException {
+    public ApiDataModel buildDataModel(String openApiContent) throws JsonProcessingException {
         return useObjectModel 
-            ? objectOpenApiParser.buildDataModel(openApiContent) 
-            : jsonOpenApiParser.buildDataModel(openApiContent);
+            ? objectOpenApiParser.buildStructuredDataModel(openApiContent) 
+            : jsonOpenApiParser.buildStructuredDataModel(openApiContent);
     }
 
     /**
      * 构建数据模型（通过JSON节点构建）
      * 
      * @param rootNode OpenAPI文档的JSON根节点
-     * @return 包含数据模型的Map
+     * @return 结构化的ApiDataModel
      * @throws JsonProcessingException 如果处理JSON出错
      */
-    public Map<String, Object> buildDataModel(JsonNode rootNode) throws JsonProcessingException {
+    public ApiDataModel buildDataModel(JsonNode rootNode) throws JsonProcessingException {
         if (useObjectModel) {
             // 将JsonNode转为字符串，然后通过对象模型解析器解析
             String jsonContent = mapper.writeValueAsString(rootNode);
-            return objectOpenApiParser.buildDataModel(jsonContent);
+            return objectOpenApiParser.buildStructuredDataModel(jsonContent);
         } else {
-            return jsonOpenApiParser.buildDataModel(rootNode);
+            return jsonOpenApiParser.buildStructuredDataModel(rootNode);
         }
     }
     

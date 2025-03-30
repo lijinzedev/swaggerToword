@@ -1,0 +1,15 @@
+1.1.1基础信息及系统管理模块
+
+{{?resources}}
+{{no}}、{{table_comment}} {{table_name}}
+中文名称	{{table_comment}}
+物理表名	{{table_name}}
+主键	{{primary_keys}}
+逻辑主键 	{{logical_keys}}
+所属表空间	{{table_space}}
+索引	
+{{detail_table}}字段列表
+序号	中文名称	列名	数据类型	长度	主键	非空	外键
+							
+
+{{/resources}} 

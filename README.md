@@ -224,4 +224,145 @@ POST /api/openapi-doc/generate-from-file
 
 ## 许可证
 
-本项目使用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情 
+本项目使用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
+
+# Database Metadata Document Generator
+
+This tool extracts database metadata from various database systems and generates structured documentation in Word format.
+
+## Features
+
+- Extract metadata from multiple database types (MySQL, PostgreSQL, Oracle, SQL Server)
+- Include table definitions, primary keys, indexes, and column details
+- Upload custom metadata in JSON format
+- Generate Word documents with a consistent template
+
+## API Usage
+
+### Database Connection and Document Generation
+
+```bash
+# Generate document from database connection
+curl -X POST \
+  http://localhost:8080/api/database/document/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "databaseType": "mysql",
+    "host": "localhost",
+    "port": 3306,
+    "databaseName": "mydb",
+    "username": "user",
+    "password": "pass",
+    "schema": "myschema"
+  }'
+```
+
+### Uploading Custom Metadata
+
+```bash
+# Generate document from uploaded metadata
+curl -X POST \
+  http://localhost:8080/api/database/document/upload \
+  -F "file=@metadata.json"
+```
+
+### Extracting Metadata Only
+
+```bash
+# Extract all metadata without generating document
+curl -X POST \
+  http://localhost:8080/api/database/metadata/extract \
+  -H "Content-Type: application/json" \
+  -d '{
+    "databaseType": "postgresql",
+    "host": "localhost",
+    "port": 5432,
+    "databaseName": "mydb",
+    "username": "user",
+    "password": "pass",
+    "schema": "public"
+  }'
+```
+
+## JSON Metadata Format
+
+Example of the JSON metadata format for uploading:
+
+```json
+{
+  "databaseName": "CustomDB",
+  "databaseType": "Custom",
+  "databaseVersion": "1.0",
+  "tables": [
+    {
+      "tableName": "users",
+      "tableComment": "System users table",
+      "schema": "public",
+      "primaryKeys": ["id"],
+      "logicalKeys": ["username"],
+      "indexes": [
+        {
+          "indexName": "idx_username",
+          "isUnique": true,
+          "columnNames": ["username"],
+          "indexType": "BTREE"
+        }
+      ],
+      "columns": [
+        {
+          "columnName": "id",
+          "columnComment": "User ID",
+          "dataType": "INT",
+          "columnSize": 11,
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "ordinalPosition": 1
+        },
+        {
+          "columnName": "username",
+          "columnComment": "User login name",
+          "dataType": "VARCHAR",
+          "columnSize": 50,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 2
+        },
+        {
+          "columnName": "email",
+          "columnComment": "User email address",
+          "dataType": "VARCHAR",
+          "columnSize": 100,
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "ordinalPosition": 3
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Running the Application
+
+```bash
+# Start the application
+./mvnw spring-boot:run
+```
+
+The Swagger UI with API documentation is available at: http://localhost:8080/swagger-ui.html
+
+## Supported Database Types
+
+- MySQL
+- PostgreSQL
+- Oracle
+- SQL Server
+- Generic JDBC (limited metadata support)
+
+## Technology Stack
+
+- Spring Boot 2.2.6
+- JDBC for database connections
+- poi-tl 1.12.2 for Word document generation
+- Swagger/SpringFox 2.9.2 for API documentation
+- Jackson for JSON processing 

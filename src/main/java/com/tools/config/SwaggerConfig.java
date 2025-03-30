@@ -11,10 +11,13 @@ import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
+/**
+ * Swagger configuration for API documentation
+ */
 @Configuration
 @EnableSwagger2
 public class SwaggerConfig {
-
+    
     @Bean
     public Docket api() {
         return new Docket(DocumentationType.SWAGGER_2)
@@ -24,13 +27,13 @@ public class SwaggerConfig {
                 .build()
                 .apiInfo(apiInfo());
     }
-
+    
     private ApiInfo apiInfo() {
         return new ApiInfoBuilder()
-                .title("OpenAPI Document Generator API")
-                .description("API for generating documentation from OpenAPI specifications")
-                .version("1.0.0")
-                .contact(new Contact("Tools Team", "https://tools.com", "contact@tools.com"))
+                .title("Database Metadata Document Generator API")
+                .description("API for extracting database metadata and generating documentation")
+                .version("1.0")
+                .contact(new Contact("Developer", "https://example.com", "developer@example.com"))
                 .build();
     }
 } 

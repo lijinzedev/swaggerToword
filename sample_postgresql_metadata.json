@@ -1,0 +1,504 @@
+{
+  "databaseName": "ecommerce_db",
+  "databaseType": "PostgreSQL",
+  "databaseVersion": "14.5",
+  "tables": [
+    {
+      "tableName": "users",
+      "tableComment": "用户账户信息表",
+      "schema": "public",
+      "primaryKeys": ["user_id"],
+      "logicalKeys": ["email"],
+      "tableSpace": "pg_default",
+      "indexes": [
+        {
+          "indexName": "users_email_idx",
+          "isUnique": true,
+          "columnNames": ["email"],
+          "indexType": "BTREE"
+        },
+        {
+          "indexName": "users_name_idx",
+          "isUnique": false,
+          "columnNames": ["first_name", "last_name"],
+          "indexType": "BTREE"
+        }
+      ],
+      "columns": [
+        {
+          "columnName": "user_id",
+          "columnComment": "用户唯一标识ID",
+          "dataType": "SERIAL",
+          "columnSize": 10,
+          "decimalDigits": 0,
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "ordinalPosition": 1
+        },
+        {
+          "columnName": "email",
+          "columnComment": "用户电子邮箱地址",
+          "dataType": "VARCHAR",
+          "columnSize": 255,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 2
+        },
+        {
+          "columnName": "password_hash",
+          "columnComment": "密码哈希值",
+          "dataType": "VARCHAR",
+          "columnSize": 128,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 3
+        },
+        {
+          "columnName": "first_name",
+          "columnComment": "用户名",
+          "dataType": "VARCHAR",
+          "columnSize": 50,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 4
+        },
+        {
+          "columnName": "last_name",
+          "columnComment": "用户姓",
+          "dataType": "VARCHAR",
+          "columnSize": 50,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 5
+        },
+        {
+          "columnName": "is_active",
+          "columnComment": "账户是否激活",
+          "dataType": "BOOLEAN",
+          "defaultValue": "true",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 6
+        },
+        {
+          "columnName": "created_at",
+          "columnComment": "创建时间",
+          "dataType": "TIMESTAMP",
+          "defaultValue": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 7
+        },
+        {
+          "columnName": "updated_at",
+          "columnComment": "更新时间",
+          "dataType": "TIMESTAMP",
+          "defaultValue": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 8
+        }
+      ]
+    },
+    {
+      "tableName": "products",
+      "tableComment": "商品信息表",
+      "schema": "public",
+      "primaryKeys": ["product_id"],
+      "logicalKeys": ["sku"],
+      "tableSpace": "pg_default",
+      "indexes": [
+        {
+          "indexName": "products_sku_idx",
+          "isUnique": true,
+          "columnNames": ["sku"],
+          "indexType": "BTREE"
+        },
+        {
+          "indexName": "products_category_idx",
+          "isUnique": false,
+          "columnNames": ["category_id"],
+          "indexType": "BTREE"
+        }
+      ],
+      "columns": [
+        {
+          "columnName": "product_id",
+          "columnComment": "商品唯一标识ID",
+          "dataType": "SERIAL",
+          "columnSize": 10,
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "ordinalPosition": 1
+        },
+        {
+          "columnName": "sku",
+          "columnComment": "商品库存单位编号",
+          "dataType": "VARCHAR",
+          "columnSize": 50,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 2
+        },
+        {
+          "columnName": "name",
+          "columnComment": "商品名称",
+          "dataType": "VARCHAR",
+          "columnSize": 255,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 3
+        },
+        {
+          "columnName": "description",
+          "columnComment": "商品描述",
+          "dataType": "TEXT",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "ordinalPosition": 4
+        },
+        {
+          "columnName": "price",
+          "columnComment": "商品价格",
+          "dataType": "DECIMAL",
+          "columnSize": 10,
+          "decimalDigits": 2,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 5
+        },
+        {
+          "columnName": "category_id",
+          "columnComment": "商品分类ID",
+          "dataType": "INTEGER",
+          "columnSize": 10,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isForeignKey": true,
+          "foreignKeyTable": "categories",
+          "foreignKeyColumn": "category_id",
+          "ordinalPosition": 6
+        },
+        {
+          "columnName": "stock_quantity",
+          "columnComment": "库存数量",
+          "dataType": "INTEGER",
+          "columnSize": 10,
+          "defaultValue": "0",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 7
+        },
+        {
+          "columnName": "created_at",
+          "columnComment": "创建时间",
+          "dataType": "TIMESTAMP",
+          "defaultValue": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 8
+        },
+        {
+          "columnName": "updated_at",
+          "columnComment": "更新时间",
+          "dataType": "TIMESTAMP",
+          "defaultValue": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 9
+        }
+      ]
+    },
+    {
+      "tableName": "categories",
+      "tableComment": "商品分类表",
+      "schema": "public",
+      "primaryKeys": ["category_id"],
+      "logicalKeys": ["name"],
+      "tableSpace": "pg_default",
+      "indexes": [
+        {
+          "indexName": "categories_name_idx",
+          "isUnique": true,
+          "columnNames": ["name"],
+          "indexType": "BTREE"
+        },
+        {
+          "indexName": "categories_parent_idx",
+          "isUnique": false,
+          "columnNames": ["parent_id"],
+          "indexType": "BTREE"
+        }
+      ],
+      "columns": [
+        {
+          "columnName": "category_id",
+          "columnComment": "分类唯一标识ID",
+          "dataType": "SERIAL",
+          "columnSize": 10,
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "ordinalPosition": 1
+        },
+        {
+          "columnName": "name",
+          "columnComment": "分类名称",
+          "dataType": "VARCHAR",
+          "columnSize": 100,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 2
+        },
+        {
+          "columnName": "description",
+          "columnComment": "分类描述",
+          "dataType": "TEXT",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "ordinalPosition": 3
+        },
+        {
+          "columnName": "parent_id",
+          "columnComment": "父分类ID",
+          "dataType": "INTEGER",
+          "columnSize": 10,
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isForeignKey": true,
+          "foreignKeyTable": "categories",
+          "foreignKeyColumn": "category_id",
+          "ordinalPosition": 4
+        },
+        {
+          "columnName": "created_at",
+          "columnComment": "创建时间",
+          "dataType": "TIMESTAMP",
+          "defaultValue": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 5
+        },
+        {
+          "columnName": "updated_at",
+          "columnComment": "更新时间",
+          "dataType": "TIMESTAMP",
+          "defaultValue": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 6
+        }
+      ]
+    },
+    {
+      "tableName": "orders",
+      "tableComment": "订单信息表",
+      "schema": "public",
+      "primaryKeys": ["order_id"],
+      "logicalKeys": ["order_number"],
+      "tableSpace": "pg_default",
+      "indexes": [
+        {
+          "indexName": "orders_number_idx",
+          "isUnique": true,
+          "columnNames": ["order_number"],
+          "indexType": "BTREE"
+        },
+        {
+          "indexName": "orders_user_idx",
+          "isUnique": false,
+          "columnNames": ["user_id"],
+          "indexType": "BTREE"
+        },
+        {
+          "indexName": "orders_status_idx",
+          "isUnique": false,
+          "columnNames": ["status"],
+          "indexType": "BTREE"
+        }
+      ],
+      "columns": [
+        {
+          "columnName": "order_id",
+          "columnComment": "订单唯一标识ID",
+          "dataType": "SERIAL",
+          "columnSize": 10,
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "ordinalPosition": 1
+        },
+        {
+          "columnName": "order_number",
+          "columnComment": "订单编号",
+          "dataType": "VARCHAR",
+          "columnSize": 50,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 2
+        },
+        {
+          "columnName": "user_id",
+          "columnComment": "下单用户ID",
+          "dataType": "INTEGER",
+          "columnSize": 10,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isForeignKey": true,
+          "foreignKeyTable": "users",
+          "foreignKeyColumn": "user_id",
+          "ordinalPosition": 3
+        },
+        {
+          "columnName": "status",
+          "columnComment": "订单状态",
+          "dataType": "VARCHAR",
+          "columnSize": 20,
+          "defaultValue": "'pending'",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 4
+        },
+        {
+          "columnName": "total_amount",
+          "columnComment": "订单总金额",
+          "dataType": "DECIMAL",
+          "columnSize": 10,
+          "decimalDigits": 2,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 5
+        },
+        {
+          "columnName": "shipping_address",
+          "columnComment": "收货地址",
+          "dataType": "TEXT",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 6
+        },
+        {
+          "columnName": "payment_method",
+          "columnComment": "支付方式",
+          "dataType": "VARCHAR",
+          "columnSize": 50,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 7
+        },
+        {
+          "columnName": "created_at",
+          "columnComment": "创建时间",
+          "dataType": "TIMESTAMP",
+          "defaultValue": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 8
+        },
+        {
+          "columnName": "updated_at",
+          "columnComment": "更新时间",
+          "dataType": "TIMESTAMP",
+          "defaultValue": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 9
+        }
+      ]
+    },
+    {
+      "tableName": "order_items",
+      "tableComment": "订单商品明细表",
+      "schema": "public",
+      "primaryKeys": ["order_item_id"],
+      "logicalKeys": [],
+      "tableSpace": "pg_default",
+      "indexes": [
+        {
+          "indexName": "order_items_order_idx",
+          "isUnique": false,
+          "columnNames": ["order_id"],
+          "indexType": "BTREE"
+        },
+        {
+          "indexName": "order_items_product_idx",
+          "isUnique": false,
+          "columnNames": ["product_id"],
+          "indexType": "BTREE"
+        }
+      ],
+      "columns": [
+        {
+          "columnName": "order_item_id",
+          "columnComment": "订单项唯一标识ID",
+          "dataType": "SERIAL",
+          "columnSize": 10,
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "ordinalPosition": 1
+        },
+        {
+          "columnName": "order_id",
+          "columnComment": "所属订单ID",
+          "dataType": "INTEGER",
+          "columnSize": 10,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isForeignKey": true,
+          "foreignKeyTable": "orders",
+          "foreignKeyColumn": "order_id",
+          "ordinalPosition": 2
+        },
+        {
+          "columnName": "product_id",
+          "columnComment": "商品ID",
+          "dataType": "INTEGER",
+          "columnSize": 10,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isForeignKey": true,
+          "foreignKeyTable": "products",
+          "foreignKeyColumn": "product_id",
+          "ordinalPosition": 3
+        },
+        {
+          "columnName": "quantity",
+          "columnComment": "购买数量",
+          "dataType": "INTEGER",
+          "columnSize": 10,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 4
+        },
+        {
+          "columnName": "unit_price",
+          "columnComment": "购买时单价",
+          "dataType": "DECIMAL",
+          "columnSize": 10,
+          "decimalDigits": 2,
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 5
+        },
+        {
+          "columnName": "discount",
+          "columnComment": "折扣金额",
+          "dataType": "DECIMAL",
+          "columnSize": 10,
+          "decimalDigits": 2,
+          "defaultValue": "0.00",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "ordinalPosition": 6
+        },
+        {
+          "columnName": "created_at",
+          "columnComment": "创建时间",
+          "dataType": "TIMESTAMP",
+          "defaultValue": "CURRENT_TIMESTAMP",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "ordinalPosition": 7
+        }
+      ]
+    }
+  ]
+} 

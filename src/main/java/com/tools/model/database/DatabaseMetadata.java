@@ -1,73 +1,64 @@
 package com.tools.model.database;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
 
 /**
- * Main class representing database metadata including all tables and their details
+ * 数据库元数据信息
+ * 包含数据库的基本信息以及所有表结构的详细元数据
  */
+@Data
+@NoArgsConstructor
 public class DatabaseMetadata {
     
+    /**
+     * 数据库名称
+     */
     private String databaseName;
+    
+    /**
+     * 数据库类型（MySQL、Oracle、PostgreSQL等）
+     */
     private String databaseType;
+    
+    /**
+     * 数据库版本号
+     */
     private String databaseVersion;
+    
+    /**
+     * 数据库连接URL
+     */
     private String url;
+    
+    /**
+     * 数据库用户名
+     */
     private String username;
-    private List<TableMetadata> tables;
     
-    public DatabaseMetadata() {
-        this.tables = new ArrayList<>();
-    }
+    /**
+     * 数据库中的表元数据列表
+     */
+    private List<TableMetadata> tables = new ArrayList<>();
     
-    public String getDatabaseName() {
-        return databaseName;
-    }
-    
-    public void setDatabaseName(String databaseName) {
-        this.databaseName = databaseName;
-    }
-    
-    public String getDatabaseType() {
-        return databaseType;
-    }
-    
-    public void setDatabaseType(String databaseType) {
-        this.databaseType = databaseType;
-    }
-    
-    public String getDatabaseVersion() {
-        return databaseVersion;
-    }
-    
-    public void setDatabaseVersion(String databaseVersion) {
-        this.databaseVersion = databaseVersion;
-    }
-    
-    public String getUrl() {
-        return url;
-    }
-    
-    public void setUrl(String url) {
-        this.url = url;
-    }
-    
-    public String getUsername() {
-        return username;
-    }
-    
-    public void setUsername(String username) {
-        this.username = username;
-    }
-    
-    public List<TableMetadata> getTables() {
-        return tables;
-    }
-    
-    public void setTables(List<TableMetadata> tables) {
-        this.tables = tables;
-    }
-    
+    /**
+     * 添加表元数据到数据库元数据中
+     * 
+     * @param table 表元数据对象
+     */
     public void addTable(TableMetadata table) {
         this.tables.add(table);
+    }
+    
+    /**
+     * 获取数据库中所有表的只读列表
+     * 
+     * @return 只读的表元数据列表
+     */
+    public List<TableMetadata> getTablesUnmodifiable() {
+        return Collections.unmodifiableList(tables);
     }
 } 

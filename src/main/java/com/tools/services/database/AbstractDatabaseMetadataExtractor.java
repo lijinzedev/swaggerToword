@@ -8,64 +8,76 @@ import java.sql.*;
 import java.util.*;
 
 /**
- * Abstract base class for database metadata extractors
- * Provides common implementation for JDBC metadata extraction
+ * 数据库元数据提取器抽象基类
+ * 提供通用的JDBC元数据提取实现，让子类专注于特定数据库的实现
  */
 public abstract class AbstractDatabaseMetadataExtractor implements DatabaseMetadataExtractor {
     
     private static final Logger logger = LoggerFactory.getLogger(AbstractDatabaseMetadataExtractor.class);
     
     /**
-     * Extract all metadata from a database
+     * 从数据库中提取所有元数据
+     * 
+     * @param config 数据库连接配置
+     * @return 完整的数据库元数据
+     * @throws RuntimeException 如果提取过程中发生严重错误
      */
     @Override
     public DatabaseMetadata extractMetadata(DatabaseConnectionConfig config) {
+        if (config == null) {
+            throw new IllegalArgumentException("数据库连接配置不能为空");
+        }
+        
+        if (!config.isValid()) {
+            throw new IllegalArgumentException("数据库连接配置无效，缺少必要参数");
+        }
+        
         DatabaseMetadata metadata = new DatabaseMetadata();
         metadata.setDatabaseName(config.getDatabaseName());
         metadata.setDatabaseType(config.getDatabaseType());
         metadata.setUsername(config.getUsername());
         metadata.setUrl(config.buildJdbcUrl());
         
-        Connection connection = null;
-        try {
-            connection = getConnection(config);
+        try (Connection connection = getConnection(config)) {
             DatabaseMetaData dbMetaData = connection.getMetaData();
             metadata.setDatabaseVersion(dbMetaData.getDatabaseProductVersion());
             
             String schema = config.getSchema();
             
-            // Get all tables
+            // 获取所有表
             try (ResultSet tables = getTables(dbMetaData, schema)) {
                 while (tables.next()) {
                     try {
                         String tableName = tables.getString("TABLE_NAME");
                         String tableSchema = tables.getString("TABLE_SCHEM");
                         
+                        logger.debug("正在提取表元数据: {}.{}", tableSchema, tableName);
                         TableMetadata tableMetadata = extractTableMetadata(dbMetaData, tableName, tableSchema);
                         if (tableMetadata != null) {
                             metadata.addTable(tableMetadata);
                         }
                     } catch (SQLException e) {
-                        // Log error but continue with next table
-                        logger.warn("Error extracting metadata for a table: {}", e.getMessage());
+                        // 记录错误但继续处理下一个表
+                        logger.warn("提取表元数据时发生错误: {}", e.getMessage());
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("详细错误信息", e);
+                        }
                     }
                 }
             } catch (SQLException e) {
-                // Log error but return metadata with what we have so far
-                logger.error("Error getting tables list: {}", e.getMessage());
+                // 记录错误但返回已提取的元数据
+                logger.error("获取表列表时发生错误: {}", e.getMessage());
+                if (logger.isDebugEnabled()) {
+                    logger.debug("详细错误信息", e);
+                }
             }
             
         } catch (SQLException e) {
-            logger.error("Error connecting to database: {}", e.getMessage());
-            throw new RuntimeException("Error extracting database metadata", e);
-        } finally {
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    logger.warn("Error closing database connection: {}", e.getMessage());
-                }
+            logger.error("连接数据库时发生错误: {}", e.getMessage());
+            if (logger.isDebugEnabled()) {
+                logger.debug("详细错误信息", e);
             }
+            throw new RuntimeException("提取数据库元数据失败", e);
         }
         
         return metadata;

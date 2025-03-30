@@ -1,106 +1,133 @@
 package com.tools.model.database;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 /**
- * Entity class representing metadata for a database table
+ * 数据库表元数据类
+ * 描述数据库表的结构信息，包括列、主键、索引等
  */
+@Data
+@NoArgsConstructor
 public class TableMetadata {
     
-    private String tableName;           // Physical table name
-    private String tableComment;        // Table comment/description
-    private String tableSpace;          // Tablespace name
-    private String schema;              // Schema name
-    private List<String> primaryKeys;   // Physical primary keys
-    private List<String> logicalKeys;   // Logical/business keys  
-    private List<IndexMetadata> indexes; // Table indexes
-    private List<ColumnMetadata> columns; // Table columns
+    /**
+     * 表名
+     */
+    private String tableName;
     
-    public TableMetadata() {
-        this.primaryKeys = new ArrayList<>();
-        this.logicalKeys = new ArrayList<>();
-        this.indexes = new ArrayList<>();
-        this.columns = new ArrayList<>();
-    }
+    /**
+     * 表注释/说明
+     */
+    private String tableComment;
     
-    public String getTableName() {
-        return tableName;
-    }
+    /**
+     * 表空间名称
+     */
+    private String tableSpace;
     
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
-    }
+    /**
+     * 模式名称
+     */
+    private String schema;
     
-    public String getTableComment() {
-        return tableComment;
-    }
+    /**
+     * 物理主键列表
+     */
+    private List<String> primaryKeys = new ArrayList<>();
     
-    public void setTableComment(String tableComment) {
-        this.tableComment = tableComment;
-    }
+    /**
+     * 逻辑/业务键列表
+     */
+    private List<String> logicalKeys = new ArrayList<>();
     
-    public String getTableSpace() {
-        return tableSpace;
-    }
+    /**
+     * 表索引列表
+     */
+    private List<IndexMetadata> indexes = new ArrayList<>();
     
-    public void setTableSpace(String tableSpace) {
-        this.tableSpace = tableSpace;
-    }
+    /**
+     * 表字段列表
+     */
+    private List<ColumnMetadata> columns = new ArrayList<>();
     
-    public String getSchema() {
-        return schema;
-    }
-    
-    public void setSchema(String schema) {
-        this.schema = schema;
-    }
-    
-    public List<String> getPrimaryKeys() {
-        return primaryKeys;
-    }
-    
-    public void setPrimaryKeys(List<String> primaryKeys) {
-        this.primaryKeys = primaryKeys;
-    }
-    
+    /**
+     * 添加主键
+     *
+     * @param primaryKey 主键字段名
+     */
     public void addPrimaryKey(String primaryKey) {
         this.primaryKeys.add(primaryKey);
     }
     
-    public List<String> getLogicalKeys() {
-        return logicalKeys;
-    }
-    
-    public void setLogicalKeys(List<String> logicalKeys) {
-        this.logicalKeys = logicalKeys;
-    }
-    
+    /**
+     * 添加逻辑/业务键
+     *
+     * @param logicalKey 逻辑键字段名
+     */
     public void addLogicalKey(String logicalKey) {
         this.logicalKeys.add(logicalKey);
     }
     
-    public List<IndexMetadata> getIndexes() {
-        return indexes;
-    }
-    
-    public void setIndexes(List<IndexMetadata> indexes) {
-        this.indexes = indexes;
-    }
-    
+    /**
+     * 添加索引
+     *
+     * @param index 索引元数据
+     */
     public void addIndex(IndexMetadata index) {
         this.indexes.add(index);
     }
     
-    public List<ColumnMetadata> getColumns() {
-        return columns;
-    }
-    
-    public void setColumns(List<ColumnMetadata> columns) {
-        this.columns = columns;
-    }
-    
+    /**
+     * 添加字段
+     *
+     * @param column 字段元数据
+     */
     public void addColumn(ColumnMetadata column) {
         this.columns.add(column);
+    }
+    
+    /**
+     * 根据列名查找字段元数据
+     *
+     * @param columnName 列名
+     * @return 可能包含字段元数据的Optional对象
+     */
+    public Optional<ColumnMetadata> findColumnByName(String columnName) {
+        return columns.stream()
+            .filter(col -> col.getColumnName().equalsIgnoreCase(columnName))
+            .findFirst();
+    }
+    
+    /**
+     * 获取不可修改的主键列表
+     *
+     * @return 只读的主键列表
+     */
+    public List<String> getPrimaryKeysUnmodifiable() {
+        return Collections.unmodifiableList(primaryKeys);
+    }
+    
+    /**
+     * 获取不可修改的索引列表
+     *
+     * @return 只读的索引列表
+     */
+    public List<IndexMetadata> getIndexesUnmodifiable() {
+        return Collections.unmodifiableList(indexes);
+    }
+    
+    /**
+     * 获取不可修改的字段列表
+     *
+     * @return 只读的字段列表
+     */
+    public List<ColumnMetadata> getColumnsUnmodifiable() {
+        return Collections.unmodifiableList(columns);
     }
 } 

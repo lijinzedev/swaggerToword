@@ -14,10 +14,14 @@ import com.tools.model.database.TableMetadata;
 import org.apache.poi.xwpf.usermodel.XWPFTable;
 import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Service;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -26,42 +30,58 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Service for generating Word documents from database metadata
+ * 数据库文档生成服务
+ * 负责将数据库元数据转换为Word文档格式的数据库设计文档
  */
+@Service
 public class DatabaseDocumentService {
 
+    private static final int TABLE_DETAIL_START_ROW = 8;
+
     /**
-     * Generate a Word document from database metadata
+     * 生成数据库文档
      *
-     * @param metadata     Database metadata
-     * @param templatePath Path to the Word template
-     * @param outputPath   Path for the generated document
-     * @throws IOException If an error occurs during document generation
+     * @param metadata     数据库元数据
+     * @param templatePath Word模板路径（相对于classpath）
+     * @param outputPath   输出文档路径
+     * @throws IOException 文档生成过程中发生IO异常
      */
     public void generateDocument(DatabaseMetadata metadata, String templatePath, String outputPath) throws IOException {
-        // Prepare data model for template
+        // 确保输出目录存在
+        ensureOutputDirectoryExists(outputPath);
+        
+        // 准备模板数据模型
         Map<String, Object> dataModel = prepareTemplateData(metadata);
 
-        // Configure and render the template with custom policies
+        // 配置并渲染模板
         Configure config = Configure.builder()
-                .bind("detail_table", new DetailTablePolicy())
+                .bind("detail_table", new ColumnDetailTablePolicy())
                 .useSpringEL()
                 .build();
 
-        XWPFTemplate template = XWPFTemplate.compile(
+        try (XWPFTemplate template = XWPFTemplate.compile(
                 new ClassPathResource(templatePath).getInputStream(),
                 config
         ).render(dataModel);
-
-        // Save the document
-        try (OutputStream out = new FileOutputStream(outputPath)) {
+             OutputStream out = new FileOutputStream(outputPath)) {
+            // 保存文档
             template.write(out);
         }
-        template.close();
     }
 
     /**
-     * Convert database metadata to template data model
+     * 确保输出目录存在
+     */
+    private void ensureOutputDirectoryExists(String outputPath) throws IOException {
+        Path path = Paths.get(outputPath);
+        Path parentDir = path.getParent();
+        if (parentDir != null && !Files.exists(parentDir)) {
+            Files.createDirectories(parentDir);
+        }
+    }
+
+    /**
+     * 将数据库元数据转换为模板数据模型
      */
     private Map<String, Object> prepareTemplateData(DatabaseMetadata metadata) {
         Map<String, Object> dataModel = new HashMap<>();
@@ -69,20 +89,20 @@ public class DatabaseDocumentService {
 
         int tableNo = 1;
 
-        // Process each table in the database
+        // 处理数据库中的每个表
         for (TableMetadata table : metadata.getTables()) {
             Map<String, Object> tableData = new HashMap<>();
 
-            // Set table data
+            // 设置表数据
             tableData.put("no", String.valueOf(tableNo++));
             tableData.put("table_name", table.getTableName());
             tableData.put("table_comment", table.getTableComment() != null ? table.getTableComment() : "");
             tableData.put("primaryKeys", String.join(", ", table.getPrimaryKeys()));
-            tableData.put("logicalKeys", table.getLogicalKeys().isEmpty() ? "无" : String.join(", ", table.getLogicalKeys()));
+            tableData.put("logicalKeys", formatListOrDefault(table.getLogicalKeys(), "无"));
             tableData.put("schema", table.getSchema() != null ? table.getSchema() : "");
-            tableData.put("index", table.getIndexes().isEmpty() ? "无" : table.getIndexes().stream().map(IndexMetadata::getIndexName).collect(Collectors.joining(", ")));
+            tableData.put("index", formatIndexes(table.getIndexes()));
 
-            // Add columns to be rendered by the policy
+            // 添加列数据（由策略类渲染）
             tableData.put("detail_table", table.getColumns());
 
             resources.add(tableData);
@@ -93,82 +113,84 @@ public class DatabaseDocumentService {
     }
 
     /**
-     * Table policy for rendering column details
+     * 格式化列表数据，如果为空则返回默认值
      */
-    public static class DetailTablePolicy extends DynamicTableRenderPolicy {
-        int startRow = 8;
+    private String formatListOrDefault(List<String> list, String defaultValue) {
+        return list.isEmpty() ? defaultValue : String.join(", ", list);
+    }
 
+    /**
+     * 格式化索引信息
+     */
+    private String formatIndexes(List<IndexMetadata> indexes) {
+        return indexes.isEmpty() 
+            ? "无" 
+            : indexes.stream()
+                .map(IndexMetadata::getIndexName)
+                .collect(Collectors.joining(", "));
+    }
+
+    /**
+     * 列详情表格渲染策略
+     * 负责动态生成表格中的列信息部分
+     */
+    public static class ColumnDetailTablePolicy extends DynamicTableRenderPolicy {
+        
         @Override
         public void render(XWPFTable table, Object data) throws Exception {
-            if (null == data) return;
+            if (data == null) return;
 
             @SuppressWarnings("unchecked")
             List<ColumnMetadata> columns = (List<ColumnMetadata>) data;
 
             if (columns == null || columns.isEmpty()) {
-                // 如果没有列数据，则删除表格的第二行（保留表头）
-                table.removeRow(startRow);
+                // 如果没有列数据，则删除表格的模板行
+                table.removeRow(TABLE_DETAIL_START_ROW);
                 return;
             }
 
             // 按照序号（ordinalPosition）升序排序
             List<ColumnMetadata> sortedColumns = columns.stream()
-                    .sorted(Comparator.comparing(ColumnMetadata::getOrdinalPosition).reversed())
+                    .sorted(Comparator.comparing(ColumnMetadata::getOrdinalPosition))
                     .collect(Collectors.toList());
 
-            List<RowRenderData> rowRenderData = sortedColumns.stream().map(column -> {
-                // 构建数据类型字符串
-                String dataTypeInfo = column.getDataType();
-                if (column.getColumnSize() != null && column.getColumnSize() > 0) {
-                    dataTypeInfo += "(" + column.getColumnSize();
-                    if (column.getDecimalDigits() != null && column.getDecimalDigits() > 0) {
-                        dataTypeInfo += "," + column.getDecimalDigits();
-                    }
-                    dataTypeInfo += ")";
-                }
-
-                // 长度
-                String length = column.getColumnSize() != null ? column.getColumnSize().toString() : "";
-
-                // 序号
-                String columnNumber = String.valueOf(column.getOrdinalPosition());
-
-                // 中文名称
-                String columnComment = column.getColumnComment() != null ? column.getColumnComment() : "";
-
-                // 列名
-                String columnName = column.getColumnName();
-
-                // 主键
-                String primaryKey = column.isPrimaryKey() ? "是" : "";
-
-                // 非空
-                String isNullable = column.isNullable() ? "" : "是";
-
-                // 外键
-                String foreignKey = column.isForeignKey() ?
-                        column.getForeignKeyTable() + "." + column.getForeignKeyColumn() : "";
-
-                return Rows.of(
-                        columnNumber,    // 序号
-                        columnComment,   // 中文名称
-                        columnName,      // 列名
-                        dataTypeInfo,    // 数据类型
-                        length,          // 长度
-                        primaryKey,      // 主键
-                        isNullable,      // 非空
-                        foreignKey       // 外键
-                ).center().create();
-            }).collect(Collectors.toList());
+            // 准备行数据
+            List<RowRenderData> rowRenderData = prepareRowData(sortedColumns);
 
             // 删除模板行
-            table.removeRow(startRow);
+            table.removeRow(TABLE_DETAIL_START_ROW);
 
-            for (int i = 0; i < rowRenderData.size(); i++) {
-                XWPFTableRow insertNewTableRow = table.insertNewTableRow(startRow);
+            // 添加实际数据行
+            renderTableRows(table, rowRenderData);
+        }
+
+        /**
+         * 准备表格行数据
+         */
+        private List<RowRenderData> prepareRowData(List<ColumnMetadata> columns) {
+            return columns.stream().map(column -> {
+                return Rows.of(
+                        String.valueOf(column.getOrdinalPosition()),      // 序号
+                        column.getColumnComment() != null ? column.getColumnComment() : "",  // 中文名称
+                        column.getColumnName(),                           // 列名
+                        column.getFormattedDataType(),                    // 数据类型
+                        column.getColumnSize() != null ? column.getColumnSize().toString() : "",  // 长度
+                        column.isPrimaryKey() ? "是" : "",                // 主键
+                        column.isNullable() ? "" : "是",                  // 非空
+                        column.getForeignKeyReference()                   // 外键
+                ).center().create();
+            }).collect(Collectors.toList());
+        }
+
+        /**
+         * 渲染表格行
+         */
+        private void renderTableRows(XWPFTable table, List<RowRenderData> rowData) throws Exception {
+            for (int i = 0; i < rowData.size(); i++) {
+                XWPFTableRow insertNewTableRow = table.insertNewTableRow(TABLE_DETAIL_START_ROW + i);
                 for (int j = 0; j < 9; j++) insertNewTableRow.createCell();
-                TableTools.mergeCellsHorizonal(table, startRow, 1, 2);
-                TableRenderPolicy.Helper.renderRow(table.getRow(startRow), rowRenderData.get(i));
+                TableTools.mergeCellsHorizonal(table, TABLE_DETAIL_START_ROW + i, 1, 2);
+                TableRenderPolicy.Helper.renderRow(table.getRow(TABLE_DETAIL_START_ROW + i), rowData.get(i));
             }
         }
     }

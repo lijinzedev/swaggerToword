@@ -1,119 +1,108 @@
 package com.tools.model.database;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 /**
- * Entity class representing metadata for a table column
+ * 数据库表字段元数据
+ * 描述数据库表中字段的详细信息
  */
+@Data
+@NoArgsConstructor
 public class ColumnMetadata {
     
-    private int ordinalPosition;        // Column sequence number
-    private String columnName;          // Physical column name 
-    private String columnComment;       // Column comment/description
-    private String dataType;            // Column data type
-    private Integer columnSize;         // Column size/length
-    private Integer decimalDigits;      // Decimal digits (precision)
-    private boolean isPrimaryKey;       // Is part of primary key
-    private boolean isNullable;         // Can be null
-    private boolean isForeignKey;       // Is foreign key
-    private String foreignKeyTable;     // Referenced table (if foreign key)
-    private String foreignKeyColumn;    // Referenced column (if foreign key)
-    private String defaultValue;        // Default value
+    /**
+     * 字段序号，表示字段在表中的位置
+     */
+    private int ordinalPosition;
     
-    public ColumnMetadata() {
+    /**
+     * 字段名称
+     */
+    private String columnName;
+    
+    /**
+     * 字段注释/说明
+     */
+    private String columnComment;
+    
+    /**
+     * 数据类型，如VARCHAR、INT等
+     */
+    private String dataType;
+    
+    /**
+     * 字段长度/大小
+     */
+    private Integer columnSize;
+    
+    /**
+     * 小数位数（对于浮点类型）
+     */
+    private Integer decimalDigits;
+    
+    /**
+     * 是否为主键的一部分
+     */
+    private boolean isPrimaryKey;
+    
+    /**
+     * 是否允许为空
+     */
+    private boolean isNullable;
+    
+    /**
+     * 是否为外键
+     */
+    private boolean isForeignKey;
+    
+    /**
+     * 引用的外键表名（如果是外键）
+     */
+    private String foreignKeyTable;
+    
+    /**
+     * 引用的外键列名（如果是外键）
+     */
+    private String foreignKeyColumn;
+    
+    /**
+     * 默认值
+     */
+    private String defaultValue;
+
+    /**
+     * 获取完整的数据类型描述，包括长度和精度
+     * 例如：VARCHAR(255)、DECIMAL(10,2)
+     *
+     * @return 格式化的数据类型字符串
+     */
+    public String getFormattedDataType() {
+        StringBuilder dataTypeInfo = new StringBuilder(dataType);
+        
+        if (columnSize != null && columnSize > 0) {
+            dataTypeInfo.append("(").append(columnSize);
+            
+            if (decimalDigits != null && decimalDigits > 0) {
+                dataTypeInfo.append(",").append(decimalDigits);
+            }
+            
+            dataTypeInfo.append(")");
+        }
+        
+        return dataTypeInfo.toString();
     }
     
-    public int getOrdinalPosition() {
-        return ordinalPosition;
-    }
-    
-    public void setOrdinalPosition(int ordinalPosition) {
-        this.ordinalPosition = ordinalPosition;
-    }
-    
-    public String getColumnName() {
-        return columnName;
-    }
-    
-    public void setColumnName(String columnName) {
-        this.columnName = columnName;
-    }
-    
-    public String getColumnComment() {
-        return columnComment;
-    }
-    
-    public void setColumnComment(String columnComment) {
-        this.columnComment = columnComment;
-    }
-    
-    public String getDataType() {
-        return dataType;
-    }
-    
-    public void setDataType(String dataType) {
-        this.dataType = dataType;
-    }
-    
-    public Integer getColumnSize() {
-        return columnSize;
-    }
-    
-    public void setColumnSize(Integer columnSize) {
-        this.columnSize = columnSize;
-    }
-    
-    public Integer getDecimalDigits() {
-        return decimalDigits;
-    }
-    
-    public void setDecimalDigits(Integer decimalDigits) {
-        this.decimalDigits = decimalDigits;
-    }
-    
-    public boolean isPrimaryKey() {
-        return isPrimaryKey;
-    }
-    
-    public void setPrimaryKey(boolean primaryKey) {
-        isPrimaryKey = primaryKey;
-    }
-    
-    public boolean isNullable() {
-        return isNullable;
-    }
-    
-    public void setNullable(boolean nullable) {
-        isNullable = nullable;
-    }
-    
-    public boolean isForeignKey() {
-        return isForeignKey;
-    }
-    
-    public void setForeignKey(boolean foreignKey) {
-        isForeignKey = foreignKey;
-    }
-    
-    public String getForeignKeyTable() {
-        return foreignKeyTable;
-    }
-    
-    public void setForeignKeyTable(String foreignKeyTable) {
-        this.foreignKeyTable = foreignKeyTable;
-    }
-    
-    public String getForeignKeyColumn() {
-        return foreignKeyColumn;
-    }
-    
-    public void setForeignKeyColumn(String foreignKeyColumn) {
-        this.foreignKeyColumn = foreignKeyColumn;
-    }
-    
-    public String getDefaultValue() {
-        return defaultValue;
-    }
-    
-    public void setDefaultValue(String defaultValue) {
-        this.defaultValue = defaultValue;
+    /**
+     * 获取字段的外键引用描述
+     * 格式为：表名.列名
+     *
+     * @return 外键引用描述，如果不是外键则返回空字符串
+     */
+    public String getForeignKeyReference() {
+        if (!isForeignKey || foreignKeyTable == null || foreignKeyColumn == null) {
+            return "";
+        }
+        return foreignKeyTable + "." + foreignKeyColumn;
     }
 } 

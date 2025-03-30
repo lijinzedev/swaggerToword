@@ -7,7 +7,6 @@ import com.tools.services.database.DatabaseMetadataExtractor;
 import com.tools.services.database.DatabaseMetadataExtractorFactory;
 import com.tools.services.document.DatabaseDocumentService;
 import com.tools.services.document.DatabaseMetadataParser;
-import com.tools.services.document.PoiTlDatabaseDocumentService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,9 +37,7 @@ public class DatabaseDocumentController {
     @Autowired
     private DatabaseDocumentService databaseDocumentService;
     
-    // Create a new instance of our improved document service
-    private final PoiTlDatabaseDocumentService poiTlDocumentService = new PoiTlDatabaseDocumentService();
-    
+
     // Create a new instance of our JSON metadata parser
     private final DatabaseMetadataParser databaseMetadataParser = new DatabaseMetadataParser();
     
@@ -70,7 +67,7 @@ public class DatabaseDocumentController {
         DatabaseMetadata metadata = extractor.extractMetadata(config);
         
         // Generate document using our new service
-        poiTlDocumentService.generateDocument(metadata, 
+        databaseDocumentService.generateDocument(metadata,
                 templatesPath + File.separator + "database_template.docx",
                 outputFilePath);
         
@@ -104,7 +101,7 @@ public class DatabaseDocumentController {
         DatabaseMetadata metadata = databaseMetadataParser.parseFromString(jsonContent);
         
         // 生成文档
-        poiTlDocumentService.generateDocument(metadata,
+        databaseDocumentService.generateDocument(metadata,
                 templatesPath + File.separator + "database_template.docx",
                 outputFilePath);
         
